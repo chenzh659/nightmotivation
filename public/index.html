@@ -1,0 +1,620 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>每日夜间动力</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --text: #f8fbff;
+      --muted: rgba(248, 251, 255, 0.72);
+      --soft: rgba(248, 251, 255, 0.5);
+      --warm: #ffd89a;
+      --active-bg: url("/assets/night-landscape-bg.png");
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      min-height: 100%;
+      margin: 0;
+    }
+
+    body {
+      display: grid;
+      place-items: center start;
+      overflow: hidden;
+      padding: clamp(1.25rem, 4vw, 4rem);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", "PingFang SC", sans-serif;
+      background: #07111f;
+    }
+
+    body.is-immersive .topbar,
+    body.is-immersive .actions,
+    body.is-immersive .favorites-panel {
+      display: none;
+    }
+
+    body.is-immersive .shell {
+      border-color: transparent;
+      background: transparent;
+      box-shadow: none;
+      backdrop-filter: none;
+    }
+
+    .wallpaper {
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(90deg, rgba(4, 8, 18, 0.62), rgba(4, 8, 18, 0.26) 46%, rgba(4, 8, 18, 0.1)),
+        linear-gradient(180deg, rgba(5, 10, 22, 0.06), rgba(3, 8, 17, 0.72)),
+        var(--active-bg);
+      background-position: center;
+      background-size: cover;
+      transform: scale(1.02);
+      animation: wallpaperFloat 28s ease-in-out infinite alternate;
+      pointer-events: none;
+    }
+
+    .wallpaper::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      opacity: 0.16;
+      mix-blend-mode: soft-light;
+      background-image: repeating-radial-gradient(circle at 0 0, rgba(255, 255, 255, 0.12) 0 1px, transparent 1px 4px);
+    }
+
+    .shell {
+      position: relative;
+      z-index: 1;
+      width: min(43rem, 100%);
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      padding: clamp(1.1rem, 2.6vw, 1.8rem);
+      border: 1px solid rgba(255, 255, 255, 0.13);
+      border-radius: 1.5rem;
+      background:
+        radial-gradient(120% 120% at 0% 0%, rgba(255, 255, 255, 0.11), transparent 46%),
+        linear-gradient(145deg, rgba(7, 13, 25, 0.48), rgba(7, 13, 25, 0.18));
+      box-shadow: 0 1.6rem 5rem rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.16);
+      backdrop-filter: blur(14px) saturate(118%);
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.75rem;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .mark {
+      width: 0.8rem;
+      height: 0.8rem;
+      border-radius: 999px;
+      background: linear-gradient(135deg, #ffd89a, #a9f3d0, #97c9ff);
+      box-shadow: 0 0 1.2rem rgba(169, 243, 208, 0.46);
+    }
+
+    .date {
+      margin: 0;
+      padding: 0.48rem 0.72rem;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 999px;
+      color: rgba(248, 251, 255, 0.66);
+      background: rgba(255, 255, 255, 0.06);
+      font-size: 0.82rem;
+      line-height: 1;
+      white-space: nowrap;
+    }
+
+    .content {
+      display: grid;
+      align-content: center;
+      padding: clamp(2rem, 5vw, 4.2rem) 0 clamp(2.2rem, 5vw, 4.5rem);
+    }
+
+    .content.is-changing .eyebrow,
+    .content.is-changing h1,
+    .content.is-changing .message {
+      animation: quoteIn 520ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+    }
+
+    .eyebrow {
+      margin: 0 0 1.05rem;
+      color: var(--warm);
+      font-size: clamp(0.86rem, 1.6vw, 1rem);
+      font-weight: 700;
+      text-shadow: 0 0.35rem 1.8rem rgba(0, 0, 0, 0.32);
+    }
+
+    h1 {
+      max-width: 11.5ch;
+      margin: 0;
+      font-size: clamp(2.55rem, 5.7vw, 4.7rem);
+      font-weight: 740;
+      line-height: 1.03;
+      letter-spacing: 0;
+      text-wrap: balance;
+      text-shadow: 0 0.35rem 1.8rem rgba(0, 0, 0, 0.32);
+    }
+
+    .message {
+      max-width: 36rem;
+      margin: clamp(1.35rem, 3vw, 2rem) 0 0;
+      color: var(--muted);
+      font-size: clamp(1.05rem, 2vw, 1.36rem);
+      line-height: 1.85;
+      text-shadow: 0 0.35rem 1.8rem rgba(0, 0, 0, 0.32);
+    }
+
+    .actions {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-areas: "hint tools" "bgs tools";
+      gap: 0.78rem 1rem;
+      align-items: end;
+      padding-top: 1rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.12);
+      color: var(--soft);
+      font-size: 0.95rem;
+    }
+
+    .hint {
+      grid-area: hint;
+      max-width: 18rem;
+      font-size: 0.88rem;
+      line-height: 1.45;
+    }
+
+    .backgrounds {
+      grid-area: bgs;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .tool-buttons {
+      grid-area: tools;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 0.5rem;
+    }
+
+    button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 2.75rem;
+      min-height: 2.75rem;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 999px;
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.1);
+      font: inherit;
+      cursor: pointer;
+      transition: transform 160ms ease, background 160ms ease, border-color 160ms ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      background: rgba(255, 255, 255, 0.16);
+    }
+
+    button:focus-visible {
+      outline: 3px solid rgba(151, 201, 255, 0.75);
+      outline-offset: 4px;
+    }
+
+    .bg-choice {
+      width: 2.35rem;
+      height: 2.35rem;
+      min-width: 2.35rem;
+      min-height: 2.35rem;
+      padding: 0;
+      color: transparent;
+      background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(0, 0, 0, 0.16)), var(--thumb);
+      background-position: center;
+      background-size: cover;
+    }
+
+    .bg-choice[aria-pressed="true"],
+    .icon-button[aria-pressed="true"] {
+      color: #06101f;
+      border-color: rgba(255, 255, 255, 0.78);
+      background-color: rgba(169, 243, 208, 0.9);
+      box-shadow: 0 0 0 3px rgba(151, 201, 255, 0.28);
+    }
+
+    .primary {
+      min-width: 6.5rem;
+      gap: 0.55rem;
+      padding: 0 1.05rem 0 0.9rem;
+      color: #06101f;
+      background: linear-gradient(135deg, #fff0c9, #a9f3d0 46%, #97c9ff);
+      border-color: rgba(255, 255, 255, 0.42);
+      font-weight: 740;
+      white-space: nowrap;
+    }
+
+    .icon {
+      width: 1.15rem;
+      height: 1.15rem;
+      flex: 0 0 auto;
+    }
+
+    .favorites-panel {
+      position: absolute;
+      right: clamp(1rem, 2vw, 1.5rem);
+      bottom: 5.6rem;
+      width: min(25rem, calc(100% - 2rem));
+      max-height: min(24rem, 54vh);
+      overflow: auto;
+      padding: 1rem;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 1.15rem;
+      background: rgba(7, 13, 25, 0.72);
+      box-shadow: 0 1.6rem 4rem rgba(0, 0, 0, 0.36);
+      backdrop-filter: blur(22px) saturate(122%);
+    }
+
+    .favorites-title {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 0.8rem;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .favorites-list {
+      display: grid;
+      gap: 0.7rem;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .favorite-card {
+      padding: 0.8rem;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 0.9rem;
+      background: rgba(255, 255, 255, 0.07);
+      cursor: pointer;
+    }
+
+    .favorite-card strong,
+    .favorite-card span {
+      display: block;
+    }
+
+    .favorite-card span,
+    .empty-state {
+      color: var(--muted);
+      font-size: 0.88rem;
+      line-height: 1.6;
+    }
+
+    @keyframes wallpaperFloat {
+      to {
+        transform: scale(1.06) translate3d(-0.8rem, -0.5rem, 0);
+      }
+    }
+
+    @keyframes quoteIn {
+      from {
+        opacity: 0;
+        transform: translate3d(0, 0.7rem, 0);
+        filter: blur(6px);
+      }
+    }
+
+    @media (max-width: 720px) {
+      body {
+        padding: 1rem;
+        place-items: end center;
+      }
+
+      .shell {
+        width: 100%;
+      }
+
+      .topbar {
+        flex-wrap: wrap;
+      }
+
+      .actions {
+        grid-template-columns: 1fr;
+        grid-template-areas: "hint" "bgs" "tools";
+      }
+
+      .tool-buttons {
+        justify-content: flex-start;
+        flex-wrap: wrap;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="wallpaper" aria-hidden="true"></div>
+
+  <main class="shell">
+    <header class="topbar">
+      <div class="brand">
+        <span class="mark"></span>
+        <span>Night Focus</span>
+      </div>
+      <p class="date" id="date"></p>
+    </header>
+
+    <section class="content" aria-live="polite">
+      <p class="eyebrow" id="eyebrow">今日提醒</p>
+      <h1 id="headline">正在取一句夜里的话。</h1>
+      <p class="message" id="message">请稍等片刻。</p>
+    </section>
+
+    <section class="favorites-panel" id="favoritesPanel" hidden>
+      <div class="favorites-title">
+        <span>收藏的箴言</span>
+        <span id="favoriteCount">0</span>
+      </div>
+      <ul class="favorites-list" id="favoritesList"></ul>
+    </section>
+
+    <footer class="actions">
+      <span class="hint" id="hint">今日箴言由后端按日期固定，也可以随时换一句。</span>
+      <div class="backgrounds" id="backgrounds" aria-label="选择背景"></div>
+      <div class="tool-buttons">
+        <button class="icon-button" type="button" id="favorite" aria-label="收藏当前箴言" aria-pressed="false" title="收藏">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-4.35-9.4-8.4C.7 9.4 2.5 5.5 6.1 5.1c2-.22 3.55.78 4.45 2.1.9-1.32 2.45-2.32 4.45-2.1 3.6.4 5.4 4.3 3.5 7.5C19 16.65 12 21 12 21Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+        </button>
+        <button class="icon-button" type="button" id="showFavorites" aria-label="查看收藏" aria-expanded="false" title="查看收藏">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4.5A2.5 2.5 0 0 1 7.5 2h9A2.5 2.5 0 0 1 19 4.5V22l-7-4-7 4V4.5Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+        </button>
+        <button class="icon-button" type="button" id="copyQuote" aria-label="复制当前箴言" title="复制">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 8.5A2.5 2.5 0 0 1 10.5 6h7A2.5 2.5 0 0 1 20 8.5v9A2.5 2.5 0 0 1 17.5 20h-7A2.5 2.5 0 0 1 8 17.5v-9Z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4 14.5v-8A2.5 2.5 0 0 1 6.5 4h8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </button>
+        <button class="icon-button" type="button" id="immersive" aria-label="进入沉浸模式" aria-pressed="false" title="沉浸模式">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </button>
+        <button class="primary" type="button" id="refresh" aria-label="换一句箴言">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 0 1-13.66 5.66M4 12A8 8 0 0 1 17.66 6.34M17 3h1.5A2.5 2.5 0 0 1 21 5.5V7M7 21H5.5A2.5 2.5 0 0 1 3 18.5V17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          换一句
+        </button>
+      </div>
+    </footer>
+  </main>
+
+  <script>
+    const els = {
+      content: document.querySelector(".content"),
+      eyebrow: document.querySelector("#eyebrow"),
+      headline: document.querySelector("#headline"),
+      message: document.querySelector("#message"),
+      date: document.querySelector("#date"),
+      hint: document.querySelector("#hint"),
+      backgrounds: document.querySelector("#backgrounds"),
+      favorite: document.querySelector("#favorite"),
+      favoritesPanel: document.querySelector("#favoritesPanel"),
+      favoritesList: document.querySelector("#favoritesList"),
+      favoriteCount: document.querySelector("#favoriteCount"),
+      showFavorites: document.querySelector("#showFavorites"),
+      copyQuote: document.querySelector("#copyQuote"),
+      immersive: document.querySelector("#immersive"),
+      refresh: document.querySelector("#refresh")
+    };
+
+    let currentQuote = null;
+    let backgrounds = [];
+    let hintTimer = 0;
+
+    async function api(path, options) {
+      const response = await fetch(path, {
+        headers: { "Content-Type": "application/json" },
+        ...options
+      });
+      if (!response.ok) throw new Error(await response.text());
+      return response.json();
+    }
+
+    function setHint(text) {
+      window.clearTimeout(hintTimer);
+      els.hint.textContent = text;
+      hintTimer = window.setTimeout(() => {
+        els.hint.textContent = "今日箴言由后端按日期固定，也可以随时换一句。";
+      }, 2400);
+    }
+
+    function animateQuote() {
+      els.content.classList.remove("is-changing");
+      void els.content.offsetWidth;
+      els.content.classList.add("is-changing");
+    }
+
+    function setQuote(quote, animate = true) {
+      currentQuote = quote;
+      els.eyebrow.textContent = quote.eyebrow;
+      els.headline.textContent = quote.headline;
+      els.message.textContent = quote.message;
+      document.title = `${quote.headline} | 每日夜间动力`;
+      els.favorite.setAttribute("aria-pressed", String(quote.favorite));
+      if (animate) animateQuote();
+    }
+
+    async function loadToday() {
+      const data = await api("/api/today");
+      setQuote(data.quote, false);
+    }
+
+    async function loadRandomQuote() {
+      const data = await api(`/api/quotes/random?exclude=${currentQuote?.id || 0}`);
+      setQuote(data.quote);
+    }
+
+    function setDate() {
+      const now = new Date();
+      const day = new Intl.DateTimeFormat("zh-CN", { month: "long", day: "numeric" }).format(now);
+      const weekday = new Intl.DateTimeFormat("zh-CN", { weekday: "short" }).format(now);
+      els.date.textContent = `${day} ${weekday}`;
+    }
+
+    async function loadBackgrounds() {
+      const data = await api("/api/backgrounds");
+      backgrounds = data.backgrounds;
+      els.backgrounds.innerHTML = "";
+
+      backgrounds.forEach((bg) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "bg-choice";
+        button.dataset.bg = bg.id;
+        button.title = bg.label;
+        button.setAttribute("aria-label", `选择${bg.label}背景`);
+        button.style.setProperty("--thumb", `url("${bg.file}")`);
+        button.addEventListener("click", () => setBackground(bg.id));
+        els.backgrounds.appendChild(button);
+      });
+
+      applyBackground(data.active || backgrounds[0]?.id);
+    }
+
+    function applyBackground(id) {
+      const selected = backgrounds.find((bg) => bg.id === id) || backgrounds[0];
+      if (!selected) return;
+      document.documentElement.style.setProperty("--active-bg", `url("${selected.file}")`);
+      document.querySelectorAll(".bg-choice").forEach((button) => {
+        button.setAttribute("aria-pressed", String(button.dataset.bg === selected.id));
+      });
+    }
+
+    async function setBackground(id) {
+      await api("/api/settings/background", {
+        method: "PUT",
+        body: JSON.stringify({ id })
+      });
+      applyBackground(id);
+      setHint(`背景已切换为：${backgrounds.find((bg) => bg.id === id)?.label || "夜景"}`);
+    }
+
+    async function toggleFavorite() {
+      if (!currentQuote) return;
+      if (currentQuote.favorite) {
+        await api(`/api/favorites/${currentQuote.id}`, { method: "DELETE" });
+        currentQuote.favorite = false;
+        setHint("已取消收藏。");
+      } else {
+        await api("/api/favorites", {
+          method: "POST",
+          body: JSON.stringify({ quoteId: currentQuote.id })
+        });
+        currentQuote.favorite = true;
+        setHint("已收藏这句箴言。");
+      }
+      els.favorite.setAttribute("aria-pressed", String(currentQuote.favorite));
+      renderFavorites();
+    }
+
+    async function renderFavorites() {
+      const data = await api("/api/favorites");
+      els.favoriteCount.textContent = String(data.favorites.length);
+      els.favoritesList.innerHTML = "";
+
+      if (data.favorites.length === 0) {
+        const empty = document.createElement("li");
+        empty.className = "empty-state";
+        empty.textContent = "还没有收藏。遇到愿意反复看的句子，就把它留下。";
+        els.favoritesList.appendChild(empty);
+        return;
+      }
+
+      data.favorites.forEach((quote) => {
+        const item = document.createElement("li");
+        item.className = "favorite-card";
+        const title = document.createElement("strong");
+        const body = document.createElement("span");
+        title.textContent = quote.headline;
+        body.textContent = quote.message;
+        item.append(title, body);
+        item.addEventListener("click", () => {
+          setQuote({ ...quote, favorite: true });
+          els.favoritesPanel.hidden = true;
+          els.showFavorites.setAttribute("aria-expanded", "false");
+        });
+        els.favoritesList.appendChild(item);
+      });
+    }
+
+    async function copyCurrentQuote() {
+      if (!currentQuote) return;
+      await navigator.clipboard.writeText(`${currentQuote.headline}\n${currentQuote.message}`);
+      setHint("已复制当前箴言。");
+    }
+
+    function toggleFavoritesPanel() {
+      const open = els.favoritesPanel.hidden;
+      els.favoritesPanel.hidden = !open;
+      els.showFavorites.setAttribute("aria-expanded", String(open));
+      if (open) renderFavorites();
+    }
+
+    function toggleImmersive(force) {
+      const active = force ?? !document.body.classList.contains("is-immersive");
+      document.body.classList.toggle("is-immersive", active);
+      els.immersive.setAttribute("aria-pressed", String(active));
+    }
+
+    function nextBackground() {
+      const active = document.querySelector(".bg-choice[aria-pressed='true']")?.dataset.bg;
+      const index = Math.max(0, backgrounds.findIndex((bg) => bg.id === active));
+      const next = backgrounds[(index + 1) % backgrounds.length];
+      if (next) setBackground(next.id);
+    }
+
+    async function init() {
+      setDate();
+      await Promise.all([loadBackgrounds(), loadToday(), renderFavorites()]);
+    }
+
+    els.refresh.addEventListener("click", loadRandomQuote);
+    els.favorite.addEventListener("click", toggleFavorite);
+    els.showFavorites.addEventListener("click", toggleFavoritesPanel);
+    els.copyQuote.addEventListener("click", copyCurrentQuote);
+    els.immersive.addEventListener("click", () => toggleImmersive());
+
+    document.addEventListener("keydown", (event) => {
+      if (event.target.matches("input, textarea") || event.target.isContentEditable) return;
+      if (event.code === "Space") {
+        event.preventDefault();
+        loadRandomQuote();
+      }
+      if (event.key.toLowerCase() === "b") nextBackground();
+      if (event.key.toLowerCase() === "c") copyCurrentQuote();
+      if (event.key.toLowerCase() === "f") toggleImmersive();
+      if (event.key === "Escape") {
+        toggleImmersive(false);
+        els.favoritesPanel.hidden = true;
+        els.showFavorites.setAttribute("aria-expanded", "false");
+      }
+    });
+
+    init().catch((error) => {
+      console.error(error);
+      els.headline.textContent = "后端暂时没有回应。";
+      els.message.textContent = "请确认已运行 npm install 和 npm start。";
+    });
+  </script>
+</body>
+</html>

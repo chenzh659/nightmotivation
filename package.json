@@ -1,0 +1,13 @@
+{
+  "name": "night-focus",
+  "version": "1.0.0",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server/app.js",
+    "dev": "node server/app.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}
