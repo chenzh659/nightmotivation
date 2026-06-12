@@ -1,10 +1,13 @@
 const fs = require("fs");
+const os = require("os");
 const path = require("path");
 const { DatabaseSync } = require("node:sqlite");
 const { quotes, backgrounds } = require("./seed");
 
 const rootDir = path.resolve(__dirname, "..");
-const dataDir = path.join(rootDir, "data");
+const dataDir = process.env.NIGHT_FOCUS_DATA_DIR || (
+  process.env.VERCEL ? path.join(os.tmpdir(), "night-focus") : path.join(rootDir, "data")
+);
 const dbPath = path.join(dataDir, "night-focus.db");
 
 function hashText(text) {

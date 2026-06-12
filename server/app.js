@@ -8,6 +8,7 @@ const port = Number(process.env.PORT || 3000);
 
 app.use(express.json());
 app.use(express.static(path.join(rootDir, "public")));
+app.use("/assets", express.static(path.join(rootDir, "public", "assets")));
 app.use("/assets", express.static(path.join(rootDir, "assets")));
 
 const getQuoteById = db.prepare(`
@@ -132,6 +133,10 @@ app.get("*", (req, res) => {
   res.sendFile(path.join(rootDir, "public", "index.html"));
 });
 
-app.listen(port, () => {
-  console.log(`Night Focus is running at http://localhost:${port}`);
-});
+if (require.main === module) {
+  app.listen(port, () => {
+    console.log(`Night Focus is running at http://localhost:${port}`);
+  });
+}
+
+module.exports = app;

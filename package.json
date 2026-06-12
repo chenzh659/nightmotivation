@@ -7,6 +7,9 @@
     "start": "node server/app.js",
     "dev": "node server/app.js"
   },
+  "engines": {
+    "node": "24.x"
+  },
   "dependencies": {
     "express": "^4.21.2"
   }
