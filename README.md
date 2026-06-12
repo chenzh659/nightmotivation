@@ -2,6 +2,8 @@
 
 一个夜间氛围的每日箴言小应用。前端展示每天固定的一句鼓励语，支持随机换一句、收藏、复制、切换背景和沉浸模式；后端用 Express 提供 API，并用 Node.js 内置 SQLite 保存收藏、历史记录和背景设置。
 
+线上地址：<https://nightmotivation.vercel.app/>
+
 ## 功能
 
 - 每日箴言：按日期哈希固定当天展示内容。
@@ -10,7 +12,7 @@
 - 背景切换：内置山湖、雪山、森林、旷野、海岸、极光等夜景背景。
 - 复制文本：一键复制当前标题和正文。
 - 沉浸模式：隐藏工具栏，只保留背景和文案。
-- 本地持久化：SQLite 数据库自动创建在 `data/night-focus.db`。
+- SQLite 存储：本地数据库自动创建在 `data/night-focus.db`；Vercel 部署时使用 `/tmp/night-focus` 作为临时运行时数据库。
 
 ## 技术栈
 
@@ -18,6 +20,7 @@
 - Node.js 内置 `node:sqlite`
 - 原生 HTML / CSS / JavaScript
 - SQLite WAL 模式
+- Vercel Functions + 静态资源托管
 
 > 由于项目使用 `node:sqlite`，建议使用 Node.js 24 或更高版本运行。本机验证版本为 `v24.16.0`。
 
@@ -53,7 +56,7 @@ npm start
 npm start
 ```
 
-启动 Express 服务，静态托管 `public/` 和 `assets/`，并暴露 `/api/*` 接口。
+启动 Express 服务，静态托管 `public/` 和 `public/assets/`，并暴露 `/api/*` 接口。
 
 ```bash
 npm run dev
@@ -65,8 +68,13 @@ npm run dev
 
 ```text
 .
+├── api/
+│   ├── index.js             # Vercel API Function 入口
+│   └── [...path].js         # /api/* 的兜底函数入口
+├── app.js                   # Vercel Express 识别入口
 ├── assets/                  # 夜景背景图片
 ├── public/
+│   ├── assets/              # Vercel 静态托管的背景图片
 │   └── index.html           # 后端 API 驱动的正式前端入口
 ├── server/
 │   ├── app.js               # Express 应用和 API 路由
@@ -75,7 +83,30 @@ npm run dev
 ├── data/                    # 运行时自动生成数据库，已被 .gitignore 忽略
 ├── night-motivation.html    # 单文件静态原型，使用 localStorage
 ├── package.json
-└── package-lock.json
+├── package-lock.json
+└── vercel.json              # 将 /api/:path* 重写到 API Function
+```
+
+## 部署
+
+项目已经适配 Vercel：
+
+- `app.js` 用于让 Vercel 识别 Express 应用。
+- `api/index.js` 和 `api/[...path].js` 用于稳定承接 `/api/*` 请求。
+- `vercel.json` 将 `/api/:path*` 重写到 API Function，并保留原始 API 路径。
+- `package.json` 固定 Node.js `24.x`，用于支持 `node:sqlite`。
+- 背景图放在 `public/assets/`，由 Vercel 直接静态托管。
+
+生产地址：
+
+```text
+https://nightmotivation.vercel.app/
+```
+
+验证 API：
+
+```text
+https://nightmotivation.vercel.app/api/today
 ```
 
 ## API
@@ -102,7 +133,9 @@ npm run dev
 - `history`：展示历史。
 - `settings`：用户设置，例如当前背景。
 
-默认箴言只会在 `quotes` 为空时写入；背景配置每次启动都会按 `server/seed.js` 同步更新。
+默认箴言会按 `server/seed.js` 自动补齐缺失内容；背景配置每次启动都会按 `server/seed.js` 同步更新。
+
+Vercel 上的 SQLite 位于临时目录 `/tmp/night-focus`，适合这个轻量演示应用。收藏、历史记录和背景设置在函数实例重建后可能会丢失；如果后续需要长期保存用户数据，可以换成外部数据库。
 
 ## 快捷键
 
@@ -119,6 +152,7 @@ npm run dev
 - 修改默认内容：编辑 `server/seed.js`。
 - 修改界面：编辑 `public/index.html`。
 - 修改 API：编辑 `server/app.js`。
+- 修改 Vercel API 入口：编辑 `api/index.js` 和 `vercel.json`。
 - 重置运行时数据：停止服务后删除 `data/night-focus.db` 及相关 WAL 文件，再重新启动。
 - `night-motivation.html` 是可独立打开的静态版本，适合做视觉或交互原型；正式运行建议使用 `public/index.html` + Express 后端。
 
@@ -128,5 +162,5 @@ npm run dev
 - 增加开发热重载：为 `npm run dev` 接入 nodemon，减少手动重启服务的成本。
 - 增加测试：为 API 路由、日期哈希、收藏和背景设置补充自动化测试。
 - 补充错误处理：为剪贴板权限、API 请求失败和数据库写入失败增加更友好的 UI 状态。
-- 明确 Node 版本：在 `package.json` 增加 `engines.node`，避免旧版本 Node 启动时报错。
 - 优化历史记录：限制同一天 `/api/today` 的重复写入，或为历史表增加去重策略。
+- 持久化升级：如果收藏和历史记录需要跨部署保留，可以接入外部数据库。

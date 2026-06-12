@@ -73,17 +73,19 @@ function openDb() {
 }
 
 function seed(db) {
-  const quoteCount = db.prepare("SELECT COUNT(*) AS count FROM quotes").get().count;
-  if (quoteCount === 0) {
-    const insertQuote = db.prepare("INSERT INTO quotes (eyebrow, headline, message) VALUES (?, ?, ?)");
-    db.exec("BEGIN");
-    try {
-      quotes.forEach((row) => insertQuote.run(...row));
-      db.exec("COMMIT");
-    } catch (error) {
-      db.exec("ROLLBACK");
-      throw error;
-    }
+  const quoteExists = db.prepare("SELECT 1 FROM quotes WHERE headline = ? AND message = ? LIMIT 1");
+  const insertQuote = db.prepare("INSERT INTO quotes (eyebrow, headline, message) VALUES (?, ?, ?)");
+  db.exec("BEGIN");
+  try {
+    quotes.forEach((row) => {
+      if (!quoteExists.get(row[1], row[2])) {
+        insertQuote.run(...row);
+      }
+    });
+    db.exec("COMMIT");
+  } catch (error) {
+    db.exec("ROLLBACK");
+    throw error;
   }
 
   const insertBackground = db.prepare(`
